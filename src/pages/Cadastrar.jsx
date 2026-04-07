@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 const SEGMENTOS = [
-  'DJ', 'Buffet e catering', 'Fotografia', 'Filmagem', 'Decoracao',
-  'Espaco para eventos', 'Banda / Musica ao vivo', 'Cerimonial',
-  'Assessoria', 'Bolo e doces', 'Iluminacao, som e telao',
-  'Mao de obra para eventos', 'Locacao de equipamentos',
-  'Locacao de materiais', 'Locacao de brinquedos',
-  'Lembrancas e brindes', 'Seguranca', 'Transporte', 'Floricultura', 'Outros'
+  'DJ', 'Buffet e catering', 'Fotografia', 'Filmagem', 'Decoração',
+  'Espaço para eventos', 'Banda / Música ao vivo', 'Cerimonial',
+  'Assessoria', 'Bolo e doces', 'Iluminação, som e telão',
+  'Mão de obra para eventos', 'Locação de equipamentos',
+  'Locação de materiais', 'Locação de brinquedos',
+  'Lembranças e brindes', 'Segurança', 'Transporte', 'Floricultura', 'Outros'
 ]
 
-const STEPS = ['Identificacao', 'Negocio', 'Contato', 'Confirmar']
+const STEPS = ['Identificação', 'Negócio', 'Contato', 'Confirmar']
 
 const ESTADOS = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS',
@@ -69,12 +69,10 @@ export default function Cadastrar() {
 
   const set = (field, value) => setForm(f => ({ ...f, [field]: value }))
 
-  // Busca cidade via IBGE com estado manual como fallback
   const buscarCidade = async (texto) => {
     if (texto.length < 3) { setCidadeSugestoes([]); return }
     setBuscandoCidade(true)
     try {
-      // Busca todos os municipios e filtra por nome
       const res = await fetch(
         'https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome'
       )
@@ -83,22 +81,13 @@ export default function Cadastrar() {
         .filter(m => m.nome.toLowerCase().startsWith(texto.toLowerCase()))
         .slice(0, 8)
         .map(m => {
-          // Navega pela estrutura de forma segura
           let uf = ''
-          try {
-            uf = m.microrregiao.mesorregiao.UF.sigla
-          } catch {
-            try {
-              uf = m.microrregiao.mesorregiao.UF.sigla
-            } catch {
-              uf = ''
-            }
-          }
+          try { uf = m.microrregiao.mesorregiao.UF.sigla } catch {}
           return { id: m.id, nome: m.nome, estado: uf }
         })
         .filter(m => m.estado)
       setCidadeSugestoes(filtradas)
-    } catch (e) {
+    } catch {
       setCidadeSugestoes([])
     }
     setBuscandoCidade(false)
@@ -134,7 +123,7 @@ export default function Cadastrar() {
       .select('slug, token_edicao, senha_hash')
       .eq('documento', doc)
       .single()
-    if (error || !data) { setError('Documento nao encontrado.'); setLoadingLogin(false); return }
+    if (error || !data) { setError('Documento não encontrado.'); setLoadingLogin(false); return }
     if (data.senha_hash !== btoa(loginSenha)) { setError('Senha incorreta.'); setLoadingLogin(false); return }
     navigate('/painel?token=' + data.token_edicao)
   }
@@ -171,7 +160,7 @@ export default function Cadastrar() {
         </a>
         <button onClick={() => { setModoLogin(!modoLogin); setError('') }}
           className="text-sm font-medium" style={{ color: '#FFBD76' }}>
-          {modoLogin ? 'Criar cadastro' : 'Ja tenho cadastro'}
+          {modoLogin ? 'Criar cadastro' : 'Já tenho cadastro'}
         </button>
       </header>
 
@@ -210,8 +199,8 @@ export default function Cadastrar() {
         ) : (
           <>
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold mb-2" style={{ color: '#28374A' }}>Cadastre seu negocio gratis</h1>
-              <p className="text-sm" style={{ color: '#6B6751' }}>Apareca no Google e seja encontrado por clientes na sua cidade.</p>
+              <h1 className="text-2xl font-bold mb-2" style={{ color: '#28374A' }}>Cadastre seu negócio grátis</h1>
+              <p className="text-sm" style={{ color: '#6B6751' }}>Apareça no Google e seja encontrado por clientes na sua cidade.</p>
             </div>
 
             <div className="flex items-center justify-center gap-2 mb-8">
@@ -233,18 +222,18 @@ export default function Cadastrar() {
 
               {step === 0 && (
                 <div className="space-y-4">
-                  <h2 className="font-semibold text-base mb-4" style={{ color: '#28374A' }}>Identificacao</h2>
+                  <h2 className="font-semibold text-base mb-4" style={{ color: '#28374A' }}>Identificação</h2>
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>CPF ou CNPJ *</label>
                     <input type="text" placeholder="000.000.000-00 ou 00.000.000/0000-00"
                       value={form.documento} onChange={e => set('documento', formatarDocumento(e.target.value))}
                       className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
                       style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
-                    <p className="text-xs mt-1" style={{ color: '#6B6751' }}>Nao sera exibido publicamente. Usado para evitar duplicatas.</p>
+                    <p className="text-xs mt-1" style={{ color: '#6B6751' }}>Não será exibido publicamente. Usado para evitar duplicatas.</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>Senha *</label>
-                    <input type="password" placeholder="Minimo 6 caracteres" value={form.senha}
+                    <input type="password" placeholder="Mínimo 6 caracteres" value={form.senha}
                       onChange={e => set('senha', e.target.value)}
                       className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
                       style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
@@ -256,7 +245,7 @@ export default function Cadastrar() {
                       className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
                       style={{ borderColor: (form.senha_confirma && form.senha !== form.senha_confirma) ? '#e53e3e' : '#D3C7AD', color: '#28374A' }} />
                     {form.senha_confirma && form.senha !== form.senha_confirma && (
-                      <p className="text-xs mt-1 text-red-600">As senhas nao conferem</p>
+                      <p className="text-xs mt-1 text-red-600">As senhas não conferem</p>
                     )}
                   </div>
                 </div>
@@ -264,9 +253,9 @@ export default function Cadastrar() {
 
               {step === 1 && (
                 <div className="space-y-4">
-                  <h2 className="font-semibold text-base mb-4" style={{ color: '#28374A' }}>Sobre o seu negocio</h2>
+                  <h2 className="font-semibold text-base mb-4" style={{ color: '#28374A' }}>Sobre o seu negócio</h2>
                   <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>Nome do negocio *</label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>Nome do negócio *</label>
                     <input type="text" placeholder="Ex: DJ Fulano, Buffet Estrela..." value={form.nome}
                       onChange={e => set('nome', e.target.value)}
                       className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
@@ -308,8 +297,14 @@ export default function Cadastrar() {
                         </div>
                       )}
                     </div>
-                    {form.estado && <p className="text-xs mt-1 font-medium" style={{ color: '#6B6751' }}>Cidade selecionada: {form.cidade} - {form.estado}</p>}
-                    {form.cidade && !form.estado && <p className="text-xs mt-1" style={{ color: '#754437' }}>Selecione uma cidade da lista</p>}
+                    {form.estado && (
+                      <p className="text-xs mt-1 font-medium" style={{ color: '#6B6751' }}>
+                        ✓ {form.cidade} — {form.estado}
+                      </p>
+                    )}
+                    {form.cidade && !form.estado && (
+                      <p className="text-xs mt-1" style={{ color: '#754437' }}>Selecione uma cidade da lista</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>
@@ -325,9 +320,9 @@ export default function Cadastrar() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>
-                      Servicos <span className="font-normal opacity-60">(separados por virgula)</span>
+                      Serviços <span className="font-normal opacity-60">(separados por vírgula)</span>
                     </label>
-                    <input type="text" placeholder="Ex: Casamentos, Aniversarios, Formaturas" value={form.servicos}
+                    <input type="text" placeholder="Ex: Casamentos, Aniversários, Formaturas" value={form.servicos}
                       onChange={e => set('servicos', e.target.value)}
                       className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
                       style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
@@ -340,8 +335,8 @@ export default function Cadastrar() {
                         style={{ transform: form.aceita_avaliacoes ? 'translateX(16px)' : 'translateX(0)' }} />
                     </div>
                     <div>
-                      <p className="text-sm font-medium" style={{ color: '#28374A' }}>Aceitar avaliacoes de clientes</p>
-                      <p className="text-xs mt-0.5" style={{ color: '#6B6751' }}>Clientes poderao deixar notas e comentarios no seu perfil.</p>
+                      <p className="text-sm font-medium" style={{ color: '#28374A' }}>Aceitar avaliações de clientes</p>
+                      <p className="text-xs mt-0.5" style={{ color: '#6B6751' }}>Clientes poderão deixar notas e comentários no seu perfil.</p>
                     </div>
                   </div>
                 </div>
@@ -378,7 +373,7 @@ export default function Cadastrar() {
                     </div>
                   </div>
                   <p className="text-xs p-3 rounded-lg" style={{ background: '#f0ede6', color: '#6B6751' }}>
-                    Pelo menos WhatsApp ou e-mail e obrigatorio.
+                    Pelo menos WhatsApp ou e-mail é obrigatório.
                   </p>
                 </div>
               )}
@@ -388,12 +383,12 @@ export default function Cadastrar() {
                   <h2 className="font-semibold text-base mb-4" style={{ color: '#28374A' }}>Confirme seus dados</h2>
                   <div className="rounded-xl p-4 space-y-2" style={{ background: '#f5f2ec' }}>
                     {[
-                      { label: 'Negocio', value: form.nome },
+                      { label: 'Negócio', value: form.nome },
                       { label: 'Segmento', value: form.segmento },
                       { label: 'Cidade', value: form.cidade + ' - ' + form.estado },
-                      form.whatsapp && { label: 'WhatsApp', value: form.whatsapp },
-                      form.email && { label: 'E-mail', value: form.email },
-                      { label: 'Avaliacoes', value: form.aceita_avaliacoes ? 'Habilitadas' : 'Desabilitadas' },
+                      form.whatsapp ? { label: 'WhatsApp', value: form.whatsapp } : null,
+                      form.email ? { label: 'E-mail', value: form.email } : null,
+                      { label: 'Avaliações', value: form.aceita_avaliacoes ? 'Habilitadas' : 'Desabilitadas' },
                     ].filter(Boolean).map(row => (
                       <div key={row.label} className="flex justify-between text-sm">
                         <span style={{ color: '#6B6751' }}>{row.label}</span>
@@ -402,10 +397,10 @@ export default function Cadastrar() {
                     ))}
                   </div>
                   <div className="p-3 rounded-xl text-sm" style={{ background: '#FFF3DC', color: '#8B5E00' }}>
-                    Nossa IA vai gerar uma descricao profissional e um artigo SEO automaticamente.
+                    ✨ Nossa IA vai gerar uma descrição profissional e um artigo SEO automaticamente.
                   </div>
                   <p className="text-xs text-center" style={{ color: '#6B6751' }}>
-                    Ao cadastrar, voce concorda com nossos Termos de uso.
+                    Ao cadastrar, você concorda com nossos Termos de uso.
                   </p>
                 </div>
               )}
@@ -422,13 +417,13 @@ export default function Cadastrar() {
                   <button onClick={() => { if (canNext()) setStep(s => s + 1) }} disabled={!canNext()}
                     className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40"
                     style={{ background: '#FFBD76', color: '#28374A' }}>
-                    Continuar
+                    Continuar →
                   </button>
                 ) : (
                   <button onClick={handleSubmit} disabled={loading}
                     className="flex-1 py-2.5 rounded-xl text-sm font-bold"
                     style={{ background: loading ? '#D3C7AD' : '#754437', color: 'white' }}>
-                    {loading ? 'Publicando...' : 'Publicar meu perfil gratis'}
+                    {loading ? 'Publicando...' : 'Publicar meu perfil grátis 🚀'}
                   </button>
                 )}
               </div>
