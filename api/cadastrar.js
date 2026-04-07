@@ -1,4 +1,4 @@
- api/cadastrar.js
+// api/cadastrar.js
 // POST /api/cadastrar
 
 import Anthropic from '@anthropic-ai/sdk'
