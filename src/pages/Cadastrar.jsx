@@ -3,29 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 const SEGMENTOS = [
-  'DJ',
-  'Buffet e catering',
-  'Fotografia',
-  'Filmagem',
-  'Decoração',
-  'Espaço para eventos',
-  'Banda / Música ao vivo',
-  'Cerimonial',
-  'Assessoria',
-  'Bolo e doces',
-  'Iluminação, som e telão',
-  'Mão de obra para eventos',
-  'Locação de equipamentos',
-  'Locação de materiais',
-  'Locação de brinquedos',
-  'Lembranças e brindes',
-  'Segurança',
-  'Transporte',
-  'Floricultura',
-  'Outros'
+  'DJ', 'Buffet e catering', 'Fotografia', 'Filmagem', 'Decoracao',
+  'Espaco para eventos', 'Banda / Musica ao vivo', 'Cerimonial',
+  'Assessoria', 'Bolo e doces', 'Iluminacao, som e telao',
+  'Mao de obra para eventos', 'Locacao de equipamentos',
+  'Locacao de materiais', 'Locacao de brinquedos',
+  'Lembrancas e brindes', 'Seguranca', 'Transporte', 'Floricultura', 'Outros'
 ]
 
-const STEPS = ['Identificação', 'Negócio', 'Contato', 'Confirmar']
+const STEPS = ['Identificacao', 'Negocio', 'Contato', 'Confirmar']
+
+const ESTADOS = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS',
+  'MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC',
+  'SP','SE','TO'
+]
 
 function formatarDocumento(valor) {
   const nums = valor.replace(/\D/g, '').slice(0, 14)
@@ -53,7 +45,6 @@ export default function Cadastrar() {
   const [loading, setLoading] = useState(false)
   const [loadingLogin, setLoadingLogin] = useState(false)
   const [error, setError] = useState('')
-  const [uploadingFoto, setUploadingFoto] = useState(null)
   const [modoLogin, setModoLogin] = useState(false)
   const [cidadeSugestoes, setCidadeSugestoes] = useState([])
   const [buscandoCidade, setBuscandoCidade] = useState(false)
@@ -69,32 +60,43 @@ export default function Cadastrar() {
     segmento: '',
     cidade: '',
     estado: '',
-    cidade_ibge_id: '',
     servicos: '',
     whatsapp: '',
     email: '',
     instagram: '',
-    foto_perfil: '',
-    foto_capa: '',
     aceita_avaliacoes: true,
   })
 
   const set = (field, value) => setForm(f => ({ ...f, [field]: value }))
 
+  // Busca cidade via IBGE com estado manual como fallback
   const buscarCidade = async (texto) => {
     if (texto.length < 3) { setCidadeSugestoes([]); return }
     setBuscandoCidade(true)
     try {
-      const res = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome')
+      // Busca todos os municipios e filtra por nome
+      const res = await fetch(
+        'https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome'
+      )
       const data = await res.json()
       const filtradas = data
-        .filter(m => m.nome.toLowerCase().includes(texto.toLowerCase()))
+        .filter(m => m.nome.toLowerCase().startsWith(texto.toLowerCase()))
         .slice(0, 8)
-        .map(m => ({
-          id: m.id,
-          nome: m.nome,
-          estado: m['regiao-imediata']['regiao-intermediaria'].UF.sigla
-        }))
+        .map(m => {
+          // Navega pela estrutura de forma segura
+          let uf = ''
+          try {
+            uf = m.microrregiao.mesorregiao.UF.sigla
+          } catch {
+            try {
+              uf = m.microrregiao.mesorregiao.UF.sigla
+            } catch {
+              uf = ''
+            }
+          }
+          return { id: m.id, nome: m.nome, estado: uf }
+        })
+        .filter(m => m.estado)
       setCidadeSugestoes(filtradas)
     } catch (e) {
       setCidadeSugestoes([])
@@ -105,28 +107,15 @@ export default function Cadastrar() {
   const onCidadeChange = (valor) => {
     set('cidade', valor)
     set('estado', '')
-    set('cidade_ibge_id', '')
     setCidadeSugestoes([])
     clearTimeout(cidadeTimer.current)
-    cidadeTimer.current = setTimeout(() => buscarCidade(valor), 400)
+    cidadeTimer.current = setTimeout(() => buscarCidade(valor), 500)
   }
 
   const selecionarCidade = (cidade) => {
     set('cidade', cidade.nome)
     set('estado', cidade.estado)
-    set('cidade_ibge_id', String(cidade.id))
     setCidadeSugestoes([])
-  }
-
-  const uploadFoto = async (file, tipo) => {
-    setUploadingFoto(tipo)
-    const ext = file.name.split('.').pop()
-    const path = `perfis/${Date.now()}-${tipo}.${ext}`
-    const { error } = await supabase.storage.from('eventhub').upload(path, file, { upsert: true })
-    if (error) { setError('Erro ao enviar foto.'); setUploadingFoto(null); return }
-    const { data } = supabase.storage.from('eventhub').getPublicUrl(path)
-    set(tipo, data.publicUrl)
-    setUploadingFoto(null)
   }
 
   const canNext = () => {
@@ -145,9 +134,9 @@ export default function Cadastrar() {
       .select('slug, token_edicao, senha_hash')
       .eq('documento', doc)
       .single()
-    if (error || !data) { setError('Documento não encontrado.'); setLoadingLogin(false); return }
+    if (error || !data) { setError('Documento nao encontrado.'); setLoadingLogin(false); return }
     if (data.senha_hash !== btoa(loginSenha)) { setError('Senha incorreta.'); setLoadingLogin(false); return }
-    navigate(`/painel?token=${data.token_edicao}`)
+    navigate('/painel?token=' + data.token_edicao)
   }
 
   const handleSubmit = async () => {
@@ -166,7 +155,7 @@ export default function Cadastrar() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro desconhecido')
-      navigate(`/painel?token=${data.token}`)
+      navigate('/painel?token=' + data.token)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -177,10 +166,12 @@ export default function Cadastrar() {
   return (
     <div className="min-h-screen" style={{ background: '#D3C7AD' }}>
       <header className="px-6 py-4 flex items-center justify-between" style={{ background: '#28374A' }}>
-        <a href="/" className="text-xl font-bold text-white">Evento<span style={{ color: '#FFBD76' }}>Hub</span></a>
+        <a href="/" className="text-xl font-bold text-white">
+          Evento<span style={{ color: '#FFBD76' }}>Hub</span>
+        </a>
         <button onClick={() => { setModoLogin(!modoLogin); setError('') }}
           className="text-sm font-medium" style={{ color: '#FFBD76' }}>
-          {modoLogin ? 'Criar cadastro' : 'Já tenho cadastro'}
+          {modoLogin ? 'Criar cadastro' : 'Ja tenho cadastro'}
         </button>
       </header>
 
@@ -219,8 +210,8 @@ export default function Cadastrar() {
         ) : (
           <>
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold mb-2" style={{ color: '#28374A' }}>Cadastre seu negócio grátis</h1>
-              <p className="text-sm" style={{ color: '#6B6751' }}>Apareça no Google e seja encontrado por clientes na sua cidade.</p>
+              <h1 className="text-2xl font-bold mb-2" style={{ color: '#28374A' }}>Cadastre seu negocio gratis</h1>
+              <p className="text-sm" style={{ color: '#6B6751' }}>Apareca no Google e seja encontrado por clientes na sua cidade.</p>
             </div>
 
             <div className="flex items-center justify-center gap-2 mb-8">
@@ -230,7 +221,7 @@ export default function Cadastrar() {
                     style={{ background: i <= step ? '#754437' : '#28374A', color: i <= step ? 'white' : 'rgba(255,255,255,0.4)' }}>
                     {i < step ? '✓' : i + 1}
                   </div>
-                  <span className={`text-xs hidden sm:block ${i === step ? 'font-medium' : 'opacity-50'}`}
+                  <span className={'text-xs hidden sm:block ' + (i === step ? 'font-medium' : 'opacity-50')}
                     style={{ color: '#28374A' }}>{s}</span>
                   {i < STEPS.length - 1 && <div className="w-6 h-px mx-1" style={{ background: '#28374A', opacity: 0.3 }} />}
                 </div>
@@ -242,18 +233,18 @@ export default function Cadastrar() {
 
               {step === 0 && (
                 <div className="space-y-4">
-                  <h2 className="font-semibold text-base mb-4" style={{ color: '#28374A' }}>Identificação</h2>
+                  <h2 className="font-semibold text-base mb-4" style={{ color: '#28374A' }}>Identificacao</h2>
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>CPF ou CNPJ *</label>
                     <input type="text" placeholder="000.000.000-00 ou 00.000.000/0000-00"
                       value={form.documento} onChange={e => set('documento', formatarDocumento(e.target.value))}
                       className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
                       style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
-                    <p className="text-xs mt-1" style={{ color: '#6B6751' }}>Não será exibido publicamente. Usado para evitar duplicatas.</p>
+                    <p className="text-xs mt-1" style={{ color: '#6B6751' }}>Nao sera exibido publicamente. Usado para evitar duplicatas.</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>Senha *</label>
-                    <input type="password" placeholder="Mínimo 6 caracteres" value={form.senha}
+                    <input type="password" placeholder="Minimo 6 caracteres" value={form.senha}
                       onChange={e => set('senha', e.target.value)}
                       className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
                       style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
@@ -263,9 +254,9 @@ export default function Cadastrar() {
                     <input type="password" placeholder="Repita a senha" value={form.senha_confirma}
                       onChange={e => set('senha_confirma', e.target.value)}
                       className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
-                      style={{ borderColor: form.senha_confirma && form.senha !== form.senha_confirma ? '#e53e3e' : '#D3C7AD', color: '#28374A' }} />
+                      style={{ borderColor: (form.senha_confirma && form.senha !== form.senha_confirma) ? '#e53e3e' : '#D3C7AD', color: '#28374A' }} />
                     {form.senha_confirma && form.senha !== form.senha_confirma && (
-                      <p className="text-xs mt-1 text-red-600">As senhas não conferem</p>
+                      <p className="text-xs mt-1 text-red-600">As senhas nao conferem</p>
                     )}
                   </div>
                 </div>
@@ -273,9 +264,9 @@ export default function Cadastrar() {
 
               {step === 1 && (
                 <div className="space-y-4">
-                  <h2 className="font-semibold text-base mb-4" style={{ color: '#28374A' }}>Sobre o seu negócio</h2>
+                  <h2 className="font-semibold text-base mb-4" style={{ color: '#28374A' }}>Sobre o seu negocio</h2>
                   <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>Nome do negócio *</label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>Nome do negocio *</label>
                     <input type="text" placeholder="Ex: DJ Fulano, Buffet Estrela..." value={form.nome}
                       onChange={e => set('nome', e.target.value)}
                       className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
@@ -296,7 +287,7 @@ export default function Cadastrar() {
                       <input type="text" placeholder="Digite o nome da cidade..." value={form.cidade}
                         onChange={e => onCidadeChange(e.target.value)} autoComplete="off"
                         className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
-                        style={{ borderColor: form.cidade && !form.estado ? '#FFBD76' : '#D3C7AD', color: '#28374A' }} />
+                        style={{ borderColor: (form.cidade && !form.estado) ? '#FFBD76' : '#D3C7AD', color: '#28374A' }} />
                       {buscandoCidade && (
                         <div className="absolute right-3 top-3">
                           <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
@@ -317,30 +308,40 @@ export default function Cadastrar() {
                         </div>
                       )}
                     </div>
-                    {form.estado && <p className="text-xs mt-1 font-medium" style={{ color: '#6B6751' }}>✓ {form.cidade} — {form.estado}</p>}
+                    {form.estado && <p className="text-xs mt-1 font-medium" style={{ color: '#6B6751' }}>Cidade selecionada: {form.cidade} - {form.estado}</p>}
                     {form.cidade && !form.estado && <p className="text-xs mt-1" style={{ color: '#754437' }}>Selecione uma cidade da lista</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>
-                      Serviços <span className="font-normal opacity-60">(separados por vírgula)</span>
+                      Estado *
+                      <span className="font-normal opacity-60 ml-1">(preenchido automaticamente ou selecione)</span>
                     </label>
-                    <input type="text" placeholder="Ex: Casamentos, Aniversários, Formaturas" value={form.servicos}
+                    <select value={form.estado} onChange={e => set('estado', e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
+                      style={{ borderColor: '#D3C7AD', color: form.estado ? '#28374A' : '#6B6751' }}>
+                      <option value="">Selecione o estado</option>
+                      {ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>
+                      Servicos <span className="font-normal opacity-60">(separados por virgula)</span>
+                    </label>
+                    <input type="text" placeholder="Ex: Casamentos, Aniversarios, Formaturas" value={form.servicos}
                       onChange={e => set('servicos', e.target.value)}
                       className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none"
                       style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
                   </div>
                   <div className="flex items-start gap-3 p-4 rounded-xl" style={{ background: '#f5f2ec' }}>
-                    <label htmlFor="aceita_avaliacoes" className="flex items-center cursor-pointer flex-shrink-0 mt-0.5">
-                      <div className="w-10 h-6 rounded-full transition-colors flex items-center px-1"
-                        style={{ background: form.aceita_avaliacoes ? '#28374A' : '#D3C7AD' }}
-                        onClick={() => set('aceita_avaliacoes', !form.aceita_avaliacoes)}>
-                        <div className="w-4 h-4 bg-white rounded-full shadow transition-transform"
-                          style={{ transform: form.aceita_avaliacoes ? 'translateX(16px)' : 'translateX(0)' }} />
-                      </div>
-                    </label>
+                    <div className="w-10 h-6 rounded-full transition-colors flex items-center px-1 flex-shrink-0 mt-0.5 cursor-pointer"
+                      style={{ background: form.aceita_avaliacoes ? '#28374A' : '#D3C7AD' }}
+                      onClick={() => set('aceita_avaliacoes', !form.aceita_avaliacoes)}>
+                      <div className="w-4 h-4 bg-white rounded-full shadow transition-transform"
+                        style={{ transform: form.aceita_avaliacoes ? 'translateX(16px)' : 'translateX(0)' }} />
+                    </div>
                     <div>
-                      <p className="text-sm font-medium" style={{ color: '#28374A' }}>Aceitar avaliações de clientes</p>
-                      <p className="text-xs mt-0.5" style={{ color: '#6B6751' }}>Clientes poderão deixar notas e comentários no seu perfil.</p>
+                      <p className="text-sm font-medium" style={{ color: '#28374A' }}>Aceitar avaliacoes de clientes</p>
+                      <p className="text-xs mt-0.5" style={{ color: '#6B6751' }}>Clientes poderao deixar notas e comentarios no seu perfil.</p>
                     </div>
                   </div>
                 </div>
@@ -364,7 +365,9 @@ export default function Cadastrar() {
                       style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>Instagram <span className="font-normal opacity-60">(opcional)</span></label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: '#28374A' }}>
+                      Instagram <span className="font-normal opacity-60">(opcional)</span>
+                    </label>
                     <div className="flex">
                       <span className="px-3 py-2.5 rounded-l-lg border border-r-0 text-sm"
                         style={{ background: '#f5f5f5', borderColor: '#D3C7AD', color: '#6B6751' }}>@</span>
@@ -375,7 +378,7 @@ export default function Cadastrar() {
                     </div>
                   </div>
                   <p className="text-xs p-3 rounded-lg" style={{ background: '#f0ede6', color: '#6B6751' }}>
-                    Pelo menos WhatsApp ou e-mail é obrigatório.
+                    Pelo menos WhatsApp ou e-mail e obrigatorio.
                   </p>
                 </div>
               )}
@@ -384,18 +387,25 @@ export default function Cadastrar() {
                 <div className="space-y-4">
                   <h2 className="font-semibold text-base mb-4" style={{ color: '#28374A' }}>Confirme seus dados</h2>
                   <div className="rounded-xl p-4 space-y-2" style={{ background: '#f5f2ec' }}>
-                    <Row label="Negócio" value={form.nome} />
-                    <Row label="Segmento" value={form.segmento} />
-                    <Row label="Cidade" value={`${form.cidade} — ${form.estado}`} />
-                    {form.whatsapp && <Row label="WhatsApp" value={form.whatsapp} />}
-                    {form.email && <Row label="E-mail" value={form.email} />}
-                    <Row label="Avaliações" value={form.aceita_avaliacoes ? 'Habilitadas' : 'Desabilitadas'} />
+                    {[
+                      { label: 'Negocio', value: form.nome },
+                      { label: 'Segmento', value: form.segmento },
+                      { label: 'Cidade', value: form.cidade + ' - ' + form.estado },
+                      form.whatsapp && { label: 'WhatsApp', value: form.whatsapp },
+                      form.email && { label: 'E-mail', value: form.email },
+                      { label: 'Avaliacoes', value: form.aceita_avaliacoes ? 'Habilitadas' : 'Desabilitadas' },
+                    ].filter(Boolean).map(row => (
+                      <div key={row.label} className="flex justify-between text-sm">
+                        <span style={{ color: '#6B6751' }}>{row.label}</span>
+                        <span className="font-medium" style={{ color: '#28374A' }}>{row.value}</span>
+                      </div>
+                    ))}
                   </div>
                   <div className="p-3 rounded-xl text-sm" style={{ background: '#FFF3DC', color: '#8B5E00' }}>
-                    ✨ Nossa IA vai gerar uma descrição profissional e um artigo SEO automaticamente.
+                    Nossa IA vai gerar uma descricao profissional e um artigo SEO automaticamente.
                   </div>
                   <p className="text-xs text-center" style={{ color: '#6B6751' }}>
-                    Ao cadastrar, você concorda com nossos <a href="/termos" className="underline">Termos de uso</a>.
+                    Ao cadastrar, voce concorda com nossos Termos de uso.
                   </p>
                 </div>
               )}
@@ -412,13 +422,13 @@ export default function Cadastrar() {
                   <button onClick={() => { if (canNext()) setStep(s => s + 1) }} disabled={!canNext()}
                     className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40"
                     style={{ background: '#FFBD76', color: '#28374A' }}>
-                    Continuar →
+                    Continuar
                   </button>
                 ) : (
                   <button onClick={handleSubmit} disabled={loading}
                     className="flex-1 py-2.5 rounded-xl text-sm font-bold"
                     style={{ background: loading ? '#D3C7AD' : '#754437', color: 'white' }}>
-                    {loading ? 'Publicando...' : 'Publicar meu perfil grátis 🚀'}
+                    {loading ? 'Publicando...' : 'Publicar meu perfil gratis'}
                   </button>
                 )}
               </div>
@@ -426,15 +436,6 @@ export default function Cadastrar() {
           </>
         )}
       </div>
-    </div>
-  )
-}
-
-function Row({ label, value }) {
-  return (
-    <div className="flex justify-between text-sm">
-      <span style={{ color: '#6B6751' }}>{label}</span>
-      <span className="font-medium" style={{ color: '#28374A' }}>{value}</span>
     </div>
   )
 }
