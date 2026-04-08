@@ -12,7 +12,6 @@ export default function Perfil() {
   const [showFormAvaliacao, setShowFormAvaliacao] = useState(false)
   const [enviandoAvaliacao, setEnviandoAvaliacao] = useState(false)
   const [avaliacaoEnviada, setAvaliacaoEnviada] = useState(false)
-
   const [formAval, setFormAval] = useState({
     autor_nome: '', autor_email: '', servico_contratado: '', nota: 5, comentario: ''
   })
@@ -30,7 +29,6 @@ export default function Perfil() {
     if (error || !data) { navigate('/fornecedores'); return }
     setFornecedor(data)
 
-    // Busca avaliações aprovadas
     if (data.aceita_avaliacoes) {
       const { data: avals } = await supabase
         .from('eventhub_avaliacoes')
@@ -79,7 +77,7 @@ export default function Perfil() {
         servico_contratado: formAval.servico_contratado,
         nota: formAval.nota,
         comentario: formAval.comentario,
-        aprovado: true  // aprovado direto no MVP
+        aprovado: true
       })
     setEnviandoAvaliacao(false)
     if (!error) {
@@ -101,7 +99,7 @@ export default function Perfil() {
   }
 
   const f = fornecedor
-  const galeria = [f.foto_capa, ...(f.galeria || [])].filter(Boolean)
+  const galeria = (f.galeria || []).filter(Boolean)
   const mediaNotas = avaliacoes.length
     ? (avaliacoes.reduce((acc, a) => acc + a.nota, 0) / avaliacoes.length).toFixed(1)
     : null
@@ -123,30 +121,24 @@ export default function Perfil() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Coluna principal */}
           <div className="lg:col-span-2 space-y-4">
 
-            {/* Card principal */}
+            {/* Card principal — sem capa separada */}
             <div className="rounded-2xl overflow-hidden bg-white">
-              {/* Capa */}
-              <div style={{ height: '160px', background: '#28374A', position: 'relative' }}>
-                {f.foto_capa
-                  ? <img src={f.foto_capa} alt={f.nome} className="w-full h-full object-cover" />
-                  : <div className="w-full h-full flex items-center justify-center text-5xl opacity-20">🎉</div>
-                }
-                <div className="absolute top-3 right-3 flex gap-2">
-                  {f.destaque && <span className="text-xs font-medium px-2 py-1 rounded-full"
-                    style={{ background: '#FFBD76', color: '#28374A' }}>⭐ Destaque</span>}
-                  {f.verificado && <span className="text-xs font-medium px-2 py-1 rounded-full"
-                    style={{ background: '#28374A', color: '#FFBD76' }}>✓ Verificado</span>}
-                </div>
-              </div>
 
-              <div className="px-5 pb-5 pt-4">
+              {/* Capa — só exibe se tiver foto */}
+              {f.foto_capa && (
+                <div style={{ height: '160px' }}>
+                  <img src={f.foto_capa} alt={f.nome} className="w-full h-full object-cover" />
+                </div>
+              )}
+
+              <div className="px-5 py-5">
+                {/* Avatar + nome em linha */}
                 <div className="flex items-center gap-4 mb-4">
                   {f.foto_perfil
                     ? <img src={f.foto_perfil} alt={f.nome}
-                        className="w-16 h-16 rounded-full object-cover border-4 flex-shrink-0"
+                        className="w-16 h-16 rounded-full object-cover flex-shrink-0 border-2"
                         style={{ borderColor: '#FFBD76' }} />
                     : <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0"
                         style={{ background: '#28374A', color: '#FFBD76' }}>
@@ -154,13 +146,23 @@ export default function Perfil() {
                       </div>
                   }
                   <div>
-                    <h1 className="text-xl font-bold leading-tight" style={{ color: '#28374A' }}>{f.nome}</h1>
-                    <p className="text-sm" style={{ color: '#6B6751' }}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h1 className="text-xl font-bold" style={{ color: '#28374A' }}>{f.nome}</h1>
+                      {f.verificado && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                          style={{ background: '#28374A', color: '#FFBD76' }}>✓ Verificado</span>
+                      )}
+                      {f.destaque && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                          style={{ background: '#FFBD76', color: '#28374A' }}>⭐ Destaque</span>
+                      )}
+                    </div>
+                    <p className="text-sm mt-0.5" style={{ color: '#6B6751' }}>
                       {f.segmento} · {f.cidade}/{f.estado}
                     </p>
                     {mediaNotas && (
                       <div className="flex items-center gap-1 mt-1">
-                        <span className="text-sm">{'★'.repeat(Math.round(mediaNotas))}</span>
+                        <span style={{ color: '#FFBD76' }}>{'★'.repeat(Math.round(Number(mediaNotas)))}</span>
                         <span className="text-xs font-medium" style={{ color: '#28374A' }}>{mediaNotas}</span>
                         <span className="text-xs" style={{ color: '#6B6751' }}>({avaliacoes.length} avaliações)</span>
                       </div>
@@ -168,16 +170,18 @@ export default function Perfil() {
                   </div>
                 </div>
 
-                {f.descricao_ia && (
-                  <div>
-                    {f.descricao_ia.split('\n').map((p, i) => p.trim() && (
+                {/* Descrição */}
+                {(f.descricao || f.descricao_ia) && (
+                  <div className="mb-4">
+                    {(f.descricao || f.descricao_ia).split('\n').map((p, i) => p.trim() && (
                       <p key={i} className="text-sm leading-relaxed mb-2" style={{ color: '#28374A' }}>{p}</p>
                     ))}
                   </div>
                 )}
 
+                {/* Serviços */}
                 {f.servicos?.length > 0 && (
-                  <div className="mt-4">
+                  <div>
                     <p className="text-xs font-semibold mb-2" style={{ color: '#6B6751' }}>SERVIÇOS</p>
                     <div className="flex flex-wrap gap-2">
                       {f.servicos.map(s => (
@@ -187,10 +191,18 @@ export default function Perfil() {
                     </div>
                   </div>
                 )}
+
+                {/* Cidades atendidas */}
+                {f.cidades_atendidas?.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold mb-1" style={{ color: '#6B6751' }}>ATENDE EM</p>
+                    <p className="text-sm" style={{ color: '#28374A' }}>{f.cidades_atendidas.join(' · ')}</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Galeria */}
+            {/* Galeria — só se tiver fotos */}
             {galeria.length > 0 && (
               <div className="rounded-2xl overflow-hidden bg-white p-4">
                 <h2 className="text-sm font-semibold mb-3" style={{ color: '#28374A' }}>Galeria</h2>
@@ -216,7 +228,10 @@ export default function Perfil() {
               <div className="rounded-2xl bg-white p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-semibold" style={{ color: '#28374A' }}>
-                    Avaliações {avaliacoes.length > 0 && <span className="font-normal text-sm" style={{ color: '#6B6751' }}>({avaliacoes.length})</span>}
+                    Avaliações
+                    {avaliacoes.length > 0 && (
+                      <span className="font-normal text-sm ml-1" style={{ color: '#6B6751' }}>({avaliacoes.length})</span>
+                    )}
                   </h2>
                   {!avaliacaoEnviada && !showFormAvaliacao && (
                     <button onClick={() => setShowFormAvaliacao(true)}
@@ -233,25 +248,19 @@ export default function Perfil() {
                   </div>
                 )}
 
-                {/* Formulário de avaliação */}
                 {showFormAvaliacao && (
                   <div className="rounded-xl p-4 mb-4 space-y-3" style={{ background: '#f5f2ec' }}>
                     <h3 className="font-medium text-sm" style={{ color: '#28374A' }}>Sua avaliação</h3>
-
-                    {/* Nota com estrelas */}
                     <div>
                       <label className="block text-xs font-medium mb-1" style={{ color: '#6B6751' }}>Nota *</label>
                       <div className="flex gap-1">
                         {[1, 2, 3, 4, 5].map(n => (
                           <button key={n} onClick={() => setAval('nota', n)}
                             className="text-2xl transition-transform hover:scale-110"
-                            style={{ color: n <= formAval.nota ? '#FFBD76' : '#D3C7AD' }}>
-                            ★
-                          </button>
+                            style={{ color: n <= formAval.nota ? '#FFBD76' : '#D3C7AD' }}>★</button>
                         ))}
                       </div>
                     </div>
-
                     <div>
                       <label className="block text-xs font-medium mb-1" style={{ color: '#6B6751' }}>Seu nome *</label>
                       <input type="text" placeholder="Como você se chama" value={formAval.autor_nome}
@@ -259,7 +268,6 @@ export default function Perfil() {
                         className="w-full px-3 py-2 rounded-lg border text-sm outline-none bg-white"
                         style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
                     </div>
-
                     <div>
                       <label className="block text-xs font-medium mb-1" style={{ color: '#6B6751' }}>
                         Seu e-mail * <span className="font-normal">(não será exibido publicamente)</span>
@@ -269,7 +277,6 @@ export default function Perfil() {
                         className="w-full px-3 py-2 rounded-lg border text-sm outline-none bg-white"
                         style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
                     </div>
-
                     <div>
                       <label className="block text-xs font-medium mb-1" style={{ color: '#6B6751' }}>Serviço contratado *</label>
                       <input type="text" placeholder="Ex: Decoração para casamento" value={formAval.servico_contratado}
@@ -277,22 +284,19 @@ export default function Perfil() {
                         className="w-full px-3 py-2 rounded-lg border text-sm outline-none bg-white"
                         style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
                     </div>
-
                     <div>
                       <label className="block text-xs font-medium mb-1" style={{ color: '#6B6751' }}>Comentário</label>
                       <textarea placeholder="Conte como foi sua experiência..." value={formAval.comentario}
-                        onChange={e => setAval('comentario', e.target.value)}
-                        rows={3} className="w-full px-3 py-2 rounded-lg border text-sm outline-none bg-white"
+                        onChange={e => setAval('comentario', e.target.value)} rows={3}
+                        className="w-full px-3 py-2 rounded-lg border text-sm outline-none bg-white"
                         style={{ borderColor: '#D3C7AD', color: '#28374A', resize: 'vertical' }} />
                     </div>
-
                     <div className="flex gap-2">
                       <button onClick={() => setShowFormAvaliacao(false)}
                         className="flex-1 py-2 rounded-xl border text-sm"
-                        style={{ borderColor: '#D3C7AD', color: '#6B6751' }}>
-                        Cancelar
-                      </button>
-                      <button onClick={enviarAvaliacao} disabled={enviandoAvaliacao || !formAval.autor_nome || !formAval.autor_email || !formAval.servico_contratado}
+                        style={{ borderColor: '#D3C7AD', color: '#6B6751' }}>Cancelar</button>
+                      <button onClick={enviarAvaliacao}
+                        disabled={enviandoAvaliacao || !formAval.autor_nome || !formAval.autor_email || !formAval.servico_contratado}
                         className="flex-1 py-2 rounded-xl text-sm font-bold disabled:opacity-40"
                         style={{ background: '#FFBD76', color: '#28374A' }}>
                         {enviandoAvaliacao ? 'Enviando...' : 'Enviar avaliação'}
@@ -301,7 +305,6 @@ export default function Perfil() {
                   </div>
                 )}
 
-                {/* Lista de avaliações */}
                 {avaliacoes.length === 0 && !showFormAvaliacao && (
                   <p className="text-sm text-center py-4" style={{ color: '#6B6751' }}>
                     Ainda sem avaliações. Seja o primeiro!
@@ -316,11 +319,9 @@ export default function Perfil() {
                           <span className="text-sm font-medium" style={{ color: '#28374A' }}>{a.autor_nome}</span>
                           <span className="text-xs ml-2" style={{ color: '#6B6751' }}>{a.servico_contratado}</span>
                         </div>
-                        <span className="text-sm" style={{ color: '#FFBD76' }}>{'★'.repeat(a.nota)}</span>
+                        <span style={{ color: '#FFBD76' }}>{'★'.repeat(a.nota)}</span>
                       </div>
-                      {a.comentario && (
-                        <p className="text-sm" style={{ color: '#28374A' }}>{a.comentario}</p>
-                      )}
+                      {a.comentario && <p className="text-sm" style={{ color: '#28374A' }}>{a.comentario}</p>}
                       <p className="text-xs mt-1" style={{ color: '#6B6751', opacity: 0.6 }}>
                         {new Date(a.created_at).toLocaleDateString('pt-BR')}
                       </p>
@@ -408,7 +409,8 @@ export default function Perfil() {
 function OutrosFornecedores({ segmento, slugAtual }) {
   const [outros, setOutros] = useState([])
   useEffect(() => {
-    supabase.from('eventhub_profiles').select('id, slug, nome, segmento, cidade, estado, foto_perfil, verificado')
+    supabase.from('eventhub_profiles')
+      .select('id, slug, nome, segmento, cidade, estado, foto_perfil, verificado')
       .eq('status', 'active').eq('segmento', segmento).neq('slug', slugAtual).limit(3)
       .then(({ data }) => setOutros(data || []))
   }, [segmento, slugAtual])
@@ -416,7 +418,9 @@ function OutrosFornecedores({ segmento, slugAtual }) {
   if (outros.length === 0) return null
   return (
     <div className="mt-8">
-      <h2 className="text-base font-semibold mb-4" style={{ color: '#28374A' }}>Outros {segmento.toLowerCase()}s</h2>
+      <h2 className="text-base font-semibold mb-4" style={{ color: '#28374A' }}>
+        Outros {segmento.toLowerCase()}s
+      </h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {outros.map(f => (
           <a key={f.id} href={'/f/' + f.slug}
