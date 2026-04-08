@@ -26,7 +26,7 @@ export default function Painel() {
     if (!fornecedor) return
     const chave = 'popup_evento360_' + token
     if (!localStorage.getItem(chave)) {
-      setTimeout(() => setShowPopup(true), 1500)
+      setTimeout(() => setShowPopup(true), 30000)
       localStorage.setItem(chave, '1')
     }
   }, [fornecedor])
