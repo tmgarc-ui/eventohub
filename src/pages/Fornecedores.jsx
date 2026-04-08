@@ -83,7 +83,7 @@ export default function Fornecedores() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-1" style={{ color: '#28374A' }}>
-            {segmento ? segmento + 's' : 'Fornecedores de eventos'}
+            {segmento ? segmento : 'Fornecedores de eventos'}
             {cidade ? ' em ' + cidade : ''}
           </h1>
           {total > 0 && (
