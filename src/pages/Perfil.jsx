@@ -66,7 +66,7 @@ export default function Perfil() {
   }
 
   const enviarAvaliacao = async () => {
-    if (!formAval.autor_nome || !formAval.autor_email || !formAval.servico_contratado) return
+    if (!formAval.autor_nome || !formAval.autor_email ) return
     setEnviandoAvaliacao(true)
     const { error } = await supabase
       .from('eventhub_avaliacoes')
@@ -278,13 +278,6 @@ export default function Perfil() {
                         style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: '#6B6751' }}>Serviço contratado *</label>
-                      <input type="text" placeholder="Ex: Decoração para casamento" value={formAval.servico_contratado}
-                        onChange={e => setAval('servico_contratado', e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border text-sm outline-none bg-white"
-                        style={{ borderColor: '#D3C7AD', color: '#28374A' }} />
-                    </div>
-                    <div>
                       <label className="block text-xs font-medium mb-1" style={{ color: '#6B6751' }}>Comentário</label>
                       <textarea placeholder="Conte como foi sua experiência..." value={formAval.comentario}
                         onChange={e => setAval('comentario', e.target.value)} rows={3}
@@ -296,7 +289,7 @@ export default function Perfil() {
                         className="flex-1 py-2 rounded-xl border text-sm"
                         style={{ borderColor: '#D3C7AD', color: '#6B6751' }}>Cancelar</button>
                       <button onClick={enviarAvaliacao}
-                        disabled={enviandoAvaliacao || !formAval.autor_nome || !formAval.autor_email || !formAval.servico_contratado}
+                        disabled={enviandoAvaliacao || !formAval.autor_nome || !formAval.autor_email}
                         className="flex-1 py-2 rounded-xl text-sm font-bold disabled:opacity-40"
                         style={{ background: '#FFBD76', color: '#28374A' }}>
                         {enviandoAvaliacao ? 'Enviando...' : 'Enviar avaliação'}
